@@ -16,7 +16,7 @@ r"""Desire 한글 빌더 (2026-10-05) — 대사·선택지 되넣기 + 한글 �
 import collections, glob, hashlib, os, re, shutil, struct, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-import font, lz, mix, disc, scn, poc, mixgrow, pagehook, boxfit
+import font, lz, mix, disc, scn, poc, mixgrow, pagehook, boxfit, choicefit
 sys.path.append(r'C:\claude\project\falcom-kr-patch\tools')
 import iso
 
@@ -318,6 +318,11 @@ def main():
     if over:
         for e in sorted(over)[:10]: print('  ⛔상자 넘침', *e)
         raise SystemExit('⛔대사 상자 3줄을 넘는 번역 %d줄 (tools/boxfit.py)' % len(over))
+    if not dm:
+        cbad = choicefit.check(norm, lambda t: t)                         # 선택지 창: 한 줄 최대 2개 흐름 배치 · 3줄(반칸 공백 훅 기준)
+        if cbad:
+            for e in cbad: print('  ⛔선택지 넘침 D%d 항목 %d @%05X %d→%d줄' % e[:5], ' / '.join(e[5]))
+            raise SystemExit('⛔선택지 창 3줄(또는 항목 폭)을 넘는 묶음 %d개 (tools/choicefit.py)' % len(cbad))
     cc = font.charcode(); ccs = set(cc)
     untr = [s for s in src.values() if s not in norm]
     used = used_codes(untr)

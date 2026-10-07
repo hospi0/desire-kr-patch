@@ -7,7 +7,7 @@ r"""Desire 배포 묶음 — dist/Desire_KR_<VER>/ : 바뀐 트랙마다 xdelta 
 import hashlib, os, shutil, subprocess, sys, zipfile
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 
-VER = 'beta'
+VER = 'v0.7'
 XDELTA = r'C:\claude\utils\xdelta.exe'
 ROMS = r'C:\claude\roms\ss'
 OUT = os.path.join(ROOT, 'work', 'out')
@@ -61,7 +61,7 @@ BODY = """
 
 [ 알려진 점 ]
 
-  - 베타판입니다. 아직 끝까지 실기로 통독하지 못했습니다. 이상한 곳이 있으면 알려 주세요.
+  - 아직 끝까지 실기로 통독하지 못했습니다. 이상한 곳이 있으면 알려 주세요.
   - 스태프 이름의 한글 읽기는 추정입니다.
 """
 

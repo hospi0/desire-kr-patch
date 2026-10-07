@@ -9,12 +9,14 @@ r"""대사 상자 쪽 넘김 훅 (2026-10-07) — 00DESIRE.BIN(적재 0x06004000
   훅 자리 0x0602ED00: 0x0602EC90‥0x0602F690 의 0 구역(참조 0 · 스테이트 1·3·4·5 모두 0).
   ⛔{s00} 는 «버튼 대기 + 다음 음성 조각»(@36 개수·@40 포인터) — 쪽 나눔에 쓰면 음성이 어긋난다.
   ★반칸 공백 훅 0x0602EE00(2026-10-07 사용자 «반각에 다듬기»): 줄바꿈 검사 0x06008316 에서 전각 공백(줄 맨 앞 제외) x −8.
-  조판 검사 모델 = tools/boxfit.py (빌더가 넘침 줄을 막는다)."""
+  조판 검사 모델 = tools/boxfit.py (빌더가 넘침 줄을 막는다).
+  ★선택지 반칸 공백 훅 0x0602EF00(2026-10-07): 선택지 0x060089B0 은 공백을 폭 0·안 그림 → 첫머리 아닌 공백 8 px. 배치 검사 = tools/choicefit.py."""
 import struct
 
 LOAD = 0x06004000
 HOOK = 0x0602ED00
 HOOK2 = 0x0602EE00                     # 반칸 공백
+HOOK3 = 0x0602EF00                     # 선택지 반칸 공백
 
 
 def _asm_page():
@@ -55,6 +57,30 @@ def _asm_space():
         (0x000B,), (0x0009,),
     ]
     return _asm(HOOK2, prog, {}, {'sp': 0x00008140, 'left': 0x0602DE74, 'right': 0x06035EC2})
+
+
+def _asm_choice():
+    """선택지 0x060089B0 의 두 고리(r1 = 글자)가 같은 리터럴 0x06008C00(원래 0x8140)으로 부른다 — pr 로 구별.
+      폭 재기(돌아갈 곳 0x06008A66, r5 = 폭): 공백 아니면 +16 · 공백이면 앞에 글자가 있을 때만 +8
+      그리기(돌아갈 곳 0x06008B2C, r4 = x · r8 = 항목 시작 x): 공백 아니면 그대로 그리러 · 공백이면 첫머리 아닐 때 x += 8 하고 0x06008B62(건너뜀)로
+    ⛔원래는 공백을 폭 0·안 그림 → 띄어쓰기가 붙어 나옴(2026-10-07 «취재허가에대해»). 맨 앞 공백은 원래대로 0."""
+    prog = [
+        (0x002A,), ('l', 2, 'ra_m'), (0x3200,), ('bf', 'draw'),    # sts pr,r0 · r2 = 0x06008A66 · cmp/eq r0,r2
+        ('l', 0, 'sp'), (0x3100,), ('bt', 'msp'),                  # 폭 재기: 공백?
+        (0x000B,), (0x7510,),                                      # rts · add #16,r5
+        'msp',
+        (0x2558,), ('bt', 'mret'), (0x7508,),                      # tst r5,r5 · (앞에 글자 있으면) add #8,r5
+        'mret',
+        (0x000B,), (0x0009,),
+        'draw',
+        ('l', 0, 'sp'), (0x3100,), ('bf', 'dret'),                 # 그리기: 공백 아니면 그대로
+        (0x3840,), ('bt', 'dskip'), (0x7408,),                     # cmp/eq r4,r8 · (첫머리 아니면) add #8,r4
+        'dskip',
+        ('l', 0, 'skip'), (0x402A,),                               # lds r0,pr → 0x06008B62
+        'dret',
+        (0x000B,), (0x0009,),
+    ]
+    return _asm(HOOK3, prog, {}, {'ra_m': 0x06008A66, 'sp': 0x00008140, 'skip': 0x06008B62})
 
 
 def _asm(org, prog, words, longs):
@@ -111,12 +137,17 @@ SITES = [
     # 글자마다 줄바꿈 검사: mov r12,r2 · mov.l @(lit),r1 · mov.w @r1,r1 · add #16,r2 · extu.w r1,r1 → mov.l @(같은 lit),r1 · jsr @r1 · nop×3
     (0x06008316, bytes.fromhex('62C3D19D 61117210 611D'.replace(' ', '')), bytes.fromhex('D19E410B 00090009 0009'.replace(' ', ''))),
     (0x06008590, bytes.fromhex('06035EC2'), struct.pack('>I', HOOK2)),
+    # 선택지 폭 재기: mov.l @(lit),r0 · cmp/eq r0,r1 · bt · add #16,r5 → mov.l(그대로) · jsr @r0 · nop · nop
+    (0x06008A60, bytes.fromhex('D0673100 89007510'), bytes.fromhex('D067400B 00090009')),
+    # 선택지 그리기: mov.l @(lit),r0 · cmp/eq r0,r1 · bt 0x06008B62 → mov.l(그대로) · jsr @r0 · nop
+    (0x06008B26, bytes.fromhex('D0363100 891A'), bytes.fromhex('D036400B 0009')),
+    (0x06008C00, bytes.fromhex('00008140'), struct.pack('>I', HOOK3)),       # 이 리터럴은 위 두 곳만 읽음
 ]
 
 
 def apply(exe):
     exe = bytearray(exe)
-    for org, code in ((HOOK, _asm_page()), (HOOK2, _asm_space())):
+    for org, code in ((HOOK, _asm_page()), (HOOK2, _asm_space()), (HOOK3, _asm_choice())):
         o = org - LOAD
         assert exe[o:o + len(code)] == bytes(len(code)), '훅 자리가 비어 있지 않음'
         exe[o:o + len(code)] = code
