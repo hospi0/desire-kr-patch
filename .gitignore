@@ -1,0 +1,16 @@
+# 허용 목록: 소스·문서·번역 텍스트만(ROM·스테이트·디스크 추출·빌드·dist·my files 금지)
+*
+!.gitignore
+!README.md
+!tools/
+!tools/*.py
+!docs/
+!docs/*.md
+!work/
+!work/text/
+!work/text/desire.tsv
+!work/text/desire_ko.tsv
+!work/text/ds_style.md
+!work/text/fixes/
+!work/text/fixes/*.tsv
+__pycache__/
