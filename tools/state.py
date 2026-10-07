@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 r"""RetroArch(Beetle Saturn) 상태 → work/mem/<이름>/ (2026-10-03)
-  WorkRAML·WorkRAMH·VDP2_VRAM = swap16(빅엔디언) / VDP1_VRAM = 스왑 안 함(이 게임에서 명령 표로 검산) / CRAM 그대로 / VDP2_REGS u16 BE
+  WorkRAML·WorkRAMH·VDP2_VRAM = swap16(빅엔디언) / VDP1_VRAM = 스왑 안 하고 저장 — ⚠명령 표를 읽을 땐 u16 바이트를 뒤집을 것(2026-10-07 선택지 스테이트로 확인: 크기 0x1002 → 0x0210) / CRAM 그대로 / VDP2_REGS u16 BE
   python tools/state.py <상태파일> <이름>
 """
 import os, struct, sys
